@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TrimKit - TexMap Mixer</title>
+<meta name="description" content="Free companion tool for TrimKit: pack and split texture channels (R, G, B, A) right in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{
+/* ===== TrimKit colors ===== */
+--c1:#202020;   /* TrimKit dark   */
+--c2:#565656;   /* TrimKit grey   */
+--c3:#e8e8e8;   /* TrimKit light  */
+--c4:#bdbdbd;   /* TrimKit silver */
+/* ===== roles (built from the four above) ===== */
+--pri:var(--c2);--pri-hi:#666;--acc:var(--c4);
+--bg:var(--c1);--aside:#252525;--panel:#2b2b2b;--panel2:#353535;--well:#181818;--line:var(--c2);
+--fg:var(--c3);--mute:var(--c4);--sel:#3d3d3d;--chk1:#282828;--chk2:#1c1c1c;
+/* ===== channel colors (R/G/B/A meaning, keep) ===== */
+--cr:#ef6b62;--cg:#6fc47a;--cb:#6a9bff;--ca:var(--c4);--r:10px}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:14px;height:54px;flex:none;padding:0 18px;background:var(--pri);color:var(--fg);box-shadow:0 2px 4px #0005,0 4px 10px #0004;position:relative;z-index:5}
+.brand{display:flex;align-items:center;gap:12px;min-width:0;color:inherit;text-decoration:none;font-size:17px;font-weight:600}
+.brand img{height:30px;width:auto;display:block;flex:none}
+.brand span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+a.cta{flex:none;background:var(--c3);color:var(--c1);text-decoration:none;font-weight:600;padding:7px 15px;border-radius:7px;white-space:nowrap;transition:background .15s}
+a.cta:hover{background:#fff}
+header.top :focus-visible{outline-color:var(--c3)}
+h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);margin:0 0 12px}
+button,select,input[type=text],input[type=number]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:7px;padding:7px 12px;font:inherit}
+button{cursor:pointer;transition:border-color .15s,background .15s}button:hover{border-color:var(--acc)}
+button.pri{background:var(--pri);color:var(--fg);border-color:var(--pri);font-weight:600}
+button.pri:hover{background:var(--pri-hi);border-color:var(--pri-hi)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+#statusbar{flex:none;padding:6px 18px;border-top:1px solid var(--line);background:var(--panel);color:var(--mute);font-size:13px}
+.ph{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}.ph h2{margin:0}.ph button{font-size:13px;padding:5px 11px}
+main{flex:1;display:grid;grid-template-columns:minmax(320px,400px) 1fr;min-height:0}
+aside{border-right:1px solid var(--line);overflow:auto;padding:16px;background:var(--aside)}
+section{overflow:auto;padding:16px 20px}
+.mute{color:var(--mute)}
+.in{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;margin-bottom:14px}
+.in .nm{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;word-break:break-all;font-weight:600}
+.in .nm .mute{font-weight:400;white-space:nowrap}
+.big{width:100%;aspect-ratio:1;object-fit:contain;background:repeating-conic-gradient(var(--chk1) 0 25%,var(--chk2) 0 50%) 0 0/16px 16px;border-radius:7px;display:block}
+.thumbs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
+.tb{padding:3px;text-align:center;font-size:12px;color:var(--mute);border-radius:7px}
+.tb img{width:100%;aspect-ratio:1;object-fit:contain;background:var(--well);border-radius:4px;display:block}
+.tb.on{border-color:var(--acc);color:var(--fg);background:var(--sel)}
+.tb.t1.on{border-color:var(--cr)}.tb.t2.on{border-color:var(--cg)}.tb.t3.on{border-color:var(--cb)}
+.acts{display:flex;gap:8px}.acts button{flex:1;font-size:13px}
+.empty{border:2px dashed var(--line);border-radius:var(--r);padding:44px 16px;text-align:center;color:var(--mute);cursor:pointer}
+.empty:hover{border-color:var(--acc);color:var(--fg)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.tab{display:inline-flex;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.tab a{padding:7px 14px;cursor:pointer}.tab i{padding:7px 10px;cursor:pointer;font-style:normal;color:var(--mute)}
+.tab i:hover{color:var(--cr)}.tab.on{border-color:var(--acc);background:var(--sel)}
+.oc{display:grid;grid-template-columns:minmax(320px,380px) 1fr;gap:20px;align-items:start}
+@media(max-width:1000px){main{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid var(--line);max-height:45vh}.oc{grid-template-columns:1fr}}
+.set{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.set label{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.set label input[type=text]{flex:1}
+.chr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 10px;margin:8px 0;background:var(--panel2);border-radius:8px;border-left:5px solid var(--ca)}
+.chr b{width:14px}.c0{border-color:var(--cr)}.c1{border-color:var(--cg)}.c2{border-color:var(--cb)}
+.chr select:first-of-type{flex:1;min-width:0}.chr input[type=range]{flex:1}
+.chr label{margin:0;white-space:nowrap}
+.set>button{width:100%;margin-top:8px;padding:10px}
+.pvbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;position:sticky;top:0}
+.views{display:flex;gap:6px;margin-bottom:10px}.views button{min-width:48px}.views button.on{background:var(--pri);color:var(--fg);border-color:var(--pri)}
+#pv{display:block;width:100%;height:calc(100vh - 250px);min-height:340px;object-fit:contain;background:repeating-conic-gradient(var(--chk1) 0 25%,var(--chk2) 0 50%) 0 0/16px 16px;border-radius:7px}
+.drop{position:fixed;inset:0;background:#101010d9;display:none;align-items:center;justify-content:center;font-size:22px;pointer-events:none}
+.drop.on{display:flex}
+
+/* ---- TrimKit info box ---- */
+dialog.promo{width:min(460px,calc(100vw - 32px));padding:0;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--fg);box-shadow:0 20px 60px #000a;overflow:hidden}
+dialog.promo::backdrop{background:#000b}
+dialog.promo[open]{animation:pop .22s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){dialog.promo[open]{animation:none}}
+.promo .hd{background:var(--pri);padding:16px 20px;display:flex;align-items:center;gap:12px;color:var(--fg)}
+.promo .hd img{height:28px;width:auto}
+.promo .hd b{font-size:16px;font-weight:600}
+.promo .bd{padding:18px 20px 6px}
+.promo p{margin:0 0 12px}
+.promo ul{margin:0 0 14px;padding-left:18px}.promo li{margin:4px 0}
+.promo .ft{display:flex;gap:10px;justify-content:flex-end;align-items:center;padding:12px 20px 18px}
+.promo a.go{background:var(--c3);color:var(--c1);text-decoration:none;font-weight:600;padding:8px 16px;border-radius:7px}
+.promo a.go:hover{background:#fff}
+</style></head>
+<body>
+<header class="top">
+  <a class="brand" href="https://trimkit.github.io/documentation/" target="_blank" rel="noopener" data-track="logo" title="TrimKit Documentation">
+    <img class="logo" src="https://trimkit.github.io/documentation/assets/trimkit-logo.png" alt="TrimKit logo">
+    <span>TrimKit - TexMap Mixer</span>
+  </a>
+  <a class="cta" href="https://trimkit.github.io/documentation/" target="_blank" rel="noopener" data-track="header">Get TrimKit here</a>
+</header>
+<input id="file" type="file" accept=".png,.jpg,.jpeg,.tga" multiple hidden onchange="addFiles(this.files);this.value=''">
+<main>
+<aside><div class="ph"><h2>Inputs</h2><button class="pri" onclick="$('#file').click()">+ Add images</button></div><div id="inputs"></div></aside>
+<section><div class="ph"><h2>Outputs</h2><button onclick="exportAll()">Download all (ZIP)</button></div><div id="outputs"></div></section>
+</main>
+<footer id="statusbar"><span id="status">Add PNG, TGA or JPG files, or drop them anywhere.</span></footer>
+<dialog class="promo" id="promo" aria-labelledby="promoTitle">
+  <div class="hd"><img class="logo" src="https://trimkit.github.io/documentation/assets/trimkit-logo.png" alt=""><b id="promoTitle">Hey, welcome to TexMap Mixer!</b></div>
+  <div class="bd">
+    <p>This is a free companion tool for <b>TrimKit</b>, my trim sheet texturing tool for 3ds Max and Blender. Please have a look at it. It can do these things:</p>
+    <ul>
+      <li>Unwrap and snap face selections onto a trim sheet</li>
+      <li>Place flat or surface-wrapping decals with one click</li>
+      <li>Generate mitered decal strips along edge loops</li>
+      <li>Save a setup once and open it in either program</li>
+    </ul>
+  </div>
+  <div class="ft">
+    <button onclick="$('#promo').close()">Maybe later</button>
+    <a class="go" href="https://trimkit.github.io/documentation/" target="_blank" rel="noopener" data-track="popup">Explore TrimKit</a>
+  </div>
+</dialog>
+<div class="drop" id="drop">Drop images to add them</div>
+<script>
+/* ===== SETTINGS ===== */
+const TK={
+  docs:'https://trimkit.github.io/documentation/',
+  goatcounter:'https://trimkit.goatcounter.com/count',      // your GoatCounter site code, e.g. 'texmapmixer' -> https://channelpacker.goatcounter.com
+  promo:'session'         // 'once' = first visit only (per browser) | 'session' = once per browser session | 'always'
+};
+/* ===== ANALYTICS (GoatCounter: cookieless; counts visits, country, referrer, events) ===== */
+if(TK.goatcounter){const g=document.createElement('script');g.async=true;g.dataset.goatcounter='https://'+TK.goatcounter+'.goatcounter.com/count';g.src='https://gc.zgo.at/count.js';document.head.appendChild(g)}
+const track=(name,title)=>{try{if(window.goatcounter&&window.goatcounter.count)window.goatcounter.count({path:name,title:title||name,event:true})}catch(e){}};
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-track]');if(a)track('trimkit-link-'+a.dataset.track,'Click TrimKit link: '+a.dataset.track)});
+/* logo fallback if the docs image can't load (offline etc.) */
+const LOGO_FALLBACK='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#e8e8e8"/><path d="M8 9h16v4h-6v11h-4V13H8z" fill="#202020"/></svg>');
+document.querySelectorAll('img.logo').forEach(i=>i.addEventListener('error',()=>{i.src=LOGO_FALLBACK},{once:true}));
+/* ===== INFO BOX ===== */
+function showPromo(){
+  const d=$('#promo');if(!d||!d.showModal)return;
+  let store=null,key='trimkit_promo_seen';
+  try{store=TK.promo==='session'?sessionStorage:localStorage}catch(e){}
+  try{if(TK.promo!=='always'&&store&&store.getItem(key))return}catch(e){}
+  setTimeout(()=>{d.showModal();try{store&&store.setItem(key,'1')}catch(e){}},700);
+}
+const $=s=>document.querySelector(s), CH='RGBA', esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const st={inputs:[],outputs:[],sel:0,nid:1,cache:new Map()};
+const byId=id=>st.inputs.find(n=>n.id===id), status=t=>$('#status').textContent=t;
+const mk=(w,h)=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c};
+
+/*ENC*/
+const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(u){let c=~0;for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);return(~c)>>>0}
+function concat(a){const o=new Uint8Array(a.reduce((s,p)=>s+p.length,0));let p=0;for(const x of a){o.set(x,p);p+=x.length}return o}
+function chunk(t,d){const b=new Uint8Array(12+d.length),v=new DataView(b.buffer);v.setUint32(0,d.length);b.set(new TextEncoder().encode(t),4);b.set(d,8);v.setUint32(8+d.length,crc32(b.subarray(4,8+d.length)));return b}
+async function encPNG(w,h,px){ // exact RGBA, no premultiplication
+  const st=w*4+1,raw=new Uint8Array(st*h);
+  for(let y=0;y<h;y++)raw.set(px.subarray(y*w*4,(y+1)*w*4),y*st+1);
+  const z=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+  const ih=new Uint8Array(13),v=new DataView(ih.buffer);v.setUint32(0,w);v.setUint32(4,h);ih[8]=8;ih[9]=6;
+  return new Blob([new Uint8Array([137,80,78,71,13,10,26,10]),chunk('IHDR',ih),chunk('IDAT',z),chunk('IEND',new Uint8Array(0))],{type:'image/png'});
+}
+function encTGA(w,h,px){
+  const o=new Uint8Array(18+w*h*4);o[2]=2;o[12]=w&255;o[13]=w>>8;o[14]=h&255;o[15]=h>>8;o[16]=32;o[17]=40;
+  for(let i=0;i<w*h;i++){o[18+i*4]=px[i*4+2];o[19+i*4]=px[i*4+1];o[20+i*4]=px[i*4];o[21+i*4]=px[i*4+3]}
+  return new Blob([o],{type:'image/x-tga'});
+}
+function decodeTGA(buf){
+  const u=new Uint8Array(buf),d=new DataView(buf),type=u[2],w=d.getUint16(12,true),h=d.getUint16(14,true),bpp=u[16],desc=u[17];
+  if(u[1]||![2,3,10,11].includes(type)||![8,24,32].includes(bpp))throw new Error('Unsupported TGA');
+  const bp=bpp/8,out=new Uint8ClampedArray(w*h*4),total=w*h;let p=18+u[0],n=0;
+  const put=o=>{const i=n*4;if(bp===1){out[i]=out[i+1]=out[i+2]=u[o];out[i+3]=255}else{out[i]=u[o+2];out[i+1]=u[o+1];out[i+2]=u[o];out[i+3]=bp===4?u[o+3]:255}n++};
+  if(type<9)while(n<total){put(p);p+=bp}
+  else while(n<total){const hd=u[p++],c=(hd&127)+1;if(hd&128){for(let k=0;k<c&&n<total;k++)put(p);p+=bp}else for(let k=0;k<c&&n<total;k++){put(p);p+=bp}}
+  if(!(desc&32)){const r=w*4,t=new Uint8ClampedArray(r);for(let y=0;y<h>>1;y++){const a=y*r,b=(h-1-y)*r;t.set(out.subarray(a,a+r));out.copyWithin(a,b,b+r);out.set(t,b)}}
+  return{w,h,data:out};
+}
+function zip(files){ // store-only ZIP
+  const te=new TextEncoder(),parts=[],cd=[];let off=0;
+  for(const f of files){
+    const nm=te.encode(f.name),c=crc32(f.data),sz=f.data.length;
+    const l=new DataView(new ArrayBuffer(30));l.setUint32(0,0x04034b50,true);l.setUint16(4,20,true);l.setUint16(6,0x800,true);l.setUint16(12,33,true);l.setUint32(14,c,true);l.setUint32(18,sz,true);l.setUint32(22,sz,true);l.setUint16(26,nm.length,true);
+    parts.push(new Uint8Array(l.buffer),nm,f.data);
+    const h=new DataView(new ArrayBuffer(46));h.setUint32(0,0x02014b50,true);h.setUint16(4,20,true);h.setUint16(6,20,true);h.setUint16(8,0x800,true);h.setUint16(14,33,true);h.setUint32(16,c,true);h.setUint32(20,sz,true);h.setUint32(24,sz,true);h.setUint16(28,nm.length,true);h.setUint32(42,off,true);
+    cd.push(new Uint8Array(h.buffer),nm);off+=30+nm.length+sz;
+  }
+  const size=cd.reduce((s,p)=>s+p.length,0),e=new DataView(new ArrayBuffer(22));
+  e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,size,true);e.setUint32(16,off,true);
+  return concat([...parts,...cd,new Uint8Array(e.buffer)]);
+}
+/*/ENC*/
+
+// ---------- loading ----------
+async function addFiles(list){
+  for(const f of list){
+    try{
+      let w,h,data;
+      if(/\.tga$/i.test(f.name))({w,h,data}=decodeTGA(await f.arrayBuffer()));
+      else if(/\.(png|jpe?g)$/i.test(f.name)){
+        const b=await createImageBitmap(f,{premultiplyAlpha:'none',colorSpaceConversion:'none'});
+        w=b.width;h=b.height;const x=mk(w,h).getContext('2d',{willReadFrequently:true});x.drawImage(b,0,0);data=x.getImageData(0,0,w,h).data;
+      }else continue;
+      const n={id:st.nid++,name:f.name,w,h,data,gray:[],view:0};thumbs(n);st.inputs.push(n);status('Loaded '+f.name);track('images-added','Image added');
+    }catch(e){status('Could not read '+f.name+' ('+(e.message||'unsupported')+')')}
+  }
+  render();
+}
+function thumbs(n){ // index 0 = colour, 1..4 = R,G,B,A as grayscale
+  const k=Math.min(1,640/Math.max(n.w,n.h)),tw=Math.max(1,Math.round(n.w*k)),th=Math.max(1,Math.round(n.h*k));
+  n.th=[0,1,2,3,4].map(c=>{
+    const cv=mk(tw,th),x=cv.getContext('2d'),im=x.createImageData(tw,th);
+    for(let y=0;y<th;y++)for(let xx=0;xx<tw;xx++){
+      const s=(Math.min(n.h-1,Math.floor(y/k))*n.w+Math.min(n.w-1,Math.floor(xx/k)))*4,d=(y*tw+xx)*4;
+      if(c===0){im.data[d]=n.data[s];im.data[d+1]=n.data[s+1];im.data[d+2]=n.data[s+2]}else im.data[d]=im.data[d+1]=im.data[d+2]=n.data[s+c-1];
+      im.data[d+3]=255;
+    }
+    x.putImageData(im,0,0);return cv.toDataURL();
+  });
+}
+
+// ---------- compositing ----------
+function chanData(n,c,w,h){
+  const key=n.id+'|'+c+'|'+w+'|'+h;let r=st.cache.get(key);if(r)return r;
+  r=new Uint8ClampedArray(w*h);
+  if(n.w===w&&n.h===h)for(let i=0;i<w*h;i++)r[i]=n.data[i*4+c];
+  else{ // resize a single channel as an opaque gray image so alpha never affects it
+    if(!n.gray[c]){const cv=mk(n.w,n.h),x=cv.getContext('2d'),im=x.createImageData(n.w,n.h);
+      for(let i=0;i<n.w*n.h;i++){const v=n.data[i*4+c];im.data[i*4]=im.data[i*4+1]=im.data[i*4+2]=v;im.data[i*4+3]=255}
+      x.putImageData(im,0,0);n.gray[c]=cv}
+    const t=mk(w,h),x=t.getContext('2d',{willReadFrequently:true});x.imageSmoothingQuality='high';x.drawImage(n.gray[c],0,0,w,h);
+    const d=x.getImageData(0,0,w,h).data;for(let i=0;i<w*h;i++)r[i]=d[i*4];
+  }
+  if(st.cache.size>60)st.cache.clear();
+  st.cache.set(key,r);return r;
+}
+function resolveSize(o){if(o.auto)for(const s of o.ch){const n=byId(s.src);if(n)return[n.w,n.h]}return[o.w,o.h]}
+function compose(o,w,h){
+  const out=new Uint8ClampedArray(w*h*4);
+  o.ch.forEach((s,c)=>{
+    const n=byId(s.src),a=n?chanData(n,s.chan,w,h):null,fill=Math.round(s.fill*255);
+    for(let i=0;i<w*h;i++){let v=a?a[i]:fill;if(a&&s.inv)v=255-v;out[i*4+c]=v}
+  });
+  return out;
+}
+function drawPreview(){
+  const o=st.outputs[st.sel],cv=$('#pv');if(!o||!cv)return;
+  const[W,H]=resolveSize(o),k=Math.min(1,1024/Math.max(W,H)),w=Math.max(1,Math.round(W*k)),h=Math.max(1,Math.round(H*k));
+  const px=compose(o,w,h),v=o.view;
+  for(let i=0;i<w*h;i++){if(v>0){const g=px[i*4+v-1];px[i*4]=px[i*4+1]=px[i*4+2]=g}px[i*4+3]=255}
+  cv.width=w;cv.height=h;cv.getContext('2d').putImageData(new ImageData(px,w,h),0,0);
+  $('#sz').textContent=W+' × '+H;
+}
+
+// ---------- state changes ----------
+const newOut=(name)=>({name,fmt:'png',auto:true,w:1024,h:1024,view:0,ch:[0,1,2,3].map(c=>({src:null,chan:0,inv:false,fill:c===3?1:0}))});
+function addOut(){st.outputs.push(newOut('Output '+(st.outputs.length+1)));st.sel=st.outputs.length-1;render()}
+function split(id){
+  const n=byId(id),base=n.name.replace(/\.\w+$/,'');
+  for(let c=0;c<4;c++){const o=newOut(base+'_'+CH[c]);for(let k=0;k<3;k++){o.ch[k].src=id;o.ch[k].chan=c}st.outputs.push(o)}
+  st.sel=st.outputs.length-4;render();
+}
+function rm(id){st.inputs=st.inputs.filter(n=>n.id!==id);st.outputs.forEach(o=>o.ch.forEach(s=>{if(s.src===id)s.src=null}));st.cache.clear();render()}
+function delOut(i){st.outputs.splice(i,1);st.sel=Math.max(0,Math.min(st.sel,st.outputs.length-1));render()}
+function setIn(id,v){byId(id).view=v;render()}
+function pick(i){st.sel=i;render()}
+function setO(k,v){const o=st.outputs[st.sel];o[k]=(k==='w'||k==='h')?Math.max(1,Math.min(16384,v|0||1)):v;render()}
+function setName(v){st.outputs[st.sel].name=v;const t=$('#tab'+st.sel);if(t)t.textContent=v||'(unnamed)'}
+function setCh(c,k,v,light){
+  const s=st.outputs[st.sel].ch[c];
+  s[k]=k==='src'?(v===''?null:+v):k==='chan'?+v:v;
+  if(light){$('#fv'+c).textContent=s.fill.toFixed(2);drawPreview()}else render();
+}
+
+// ---------- rendering ----------
+function outHTML(o,i){
+  const opts=s=>'<option value="">None (constant)</option>'+st.inputs.map((n,k)=>`<option value="${n.id}" ${s.src===n.id?'selected':''}>${k+1}: ${esc(n.name)}</option>`).join('');
+  return `<div class="oc"><div class="set">
+    <label>Name <input type="text" value="${esc(o.name)}" oninput="setName(this.value)"></label>
+    <label>Format <select onchange="setO('fmt',this.value)">${['png','tga','jpg'].map(f=>`<option value="${f}" ${o.fmt===f?'selected':''}>${f.toUpperCase()}${f==='jpg'?' (no alpha)':''}</option>`).join('')}</select></label>
+    <label><input type="checkbox" ${o.auto?'checked':''} onchange="setO('auto',this.checked)"> Use size of the first input in use</label>
+    ${o.auto?'':`<label>Width <input type="number" min="1" max="16384" value="${o.w}" onchange="setO('w',+this.value)" style="width:90px"> Height <input type="number" min="1" max="16384" value="${o.h}" onchange="setO('h',+this.value)" style="width:90px"></label>`}
+    <div class="mute" style="margin-bottom:6px">Output size: <span id="sz"></span></div>
+    ${o.ch.map((s,c)=>`<div class="chr c${c}"><b>${CH[c]}</b>
+      <select onchange="setCh(${c},'src',this.value)" aria-label="Source for ${CH[c]}">${opts(s)}</select>
+      ${s.src==null?`<input type="range" min="0" max="1" step="0.01" value="${s.fill}" oninput="setCh(${c},'fill',+this.value,1)" aria-label="Constant value"><span id="fv${c}">${s.fill.toFixed(2)}</span>`
+      :`<select onchange="setCh(${c},'chan',this.value)" aria-label="Source channel">${[...CH].map((l,k)=>`<option value="${k}" ${s.chan===k?'selected':''}>${l}</option>`).join('')}</select>
+        <label><input type="checkbox" ${s.inv?'checked':''} onchange="setCh(${c},'inv',this.checked)"> Invert</label>`}
+    </div>`).join('')}
+    <button class="pri" onclick="exportOne(${i})">Download this output</button>
+  </div><div class="pvbox"><div class="views">${['RGB','R','G','B','A'].map((l,v)=>`<button class="${o.view===v?'on':''}" onclick="setO('view',${v})">${l}</button>`).join('')}</div><canvas id="pv"></canvas></div></div>`;
+}
+function render(){
+  $('#inputs').innerHTML=st.inputs.length?st.inputs.map((n,k)=>`<div class="in"><div class="nm"><span>${k+1}: ${esc(n.name)}</span><span class="mute">${n.w}×${n.h}</span></div>
+    <img class="big" src="${n.th[n.view]}" alt="${n.view?CH[n.view-1]+' channel':'Colour'} preview">
+    <div class="thumbs">${n.th.map((u,c)=>`<button class="tb t${c} ${n.view===c?'on':''}" onclick="setIn(${n.id},${c})" title="Preview ${c?CH[c-1]+' channel':'all channels'}"><img src="${u}" alt=""><span>${c?CH[c-1]:'All'}</span></button>`).join('')}</div>
+    <div class="acts"><button onclick="split(${n.id})">Split into 4 outputs</button><button onclick="rm(${n.id})">Remove</button></div></div>`).join('')
+    :'<div class="empty" onclick="$(\'#file\').click()">Drop images here or click to browse<br><small>PNG · TGA · JPG</small></div>';
+  $('#outputs').innerHTML=`<div class="tabs">${st.outputs.map((o,i)=>`<span class="tab ${i===st.sel?'on':''}"><a id="tab${i}" onclick="pick(${i})">${esc(o.name)||'(unnamed)'}</a><i onclick="delOut(${i})" title="Delete output">×</i></span>`).join('')}
+    <button onclick="addOut()">+ New output</button></div>`
+    +(st.outputs.length?outHTML(st.outputs[st.sel],st.sel):'<p class="mute">Add an output, then choose which input channel feeds each of its R, G, B and A channels.</p>');
+  drawPreview();
+}
+
+// ---------- export ----------
+async function blobFor(o){
+  const[w,h]=resolveSize(o),px=compose(o,w,h);
+  if(o.fmt==='png')return encPNG(w,h,px);
+  if(o.fmt==='tga')return encTGA(w,h,px);
+  for(let i=0;i<w*h;i++)px[i*4+3]=255;
+  const c=mk(w,h);c.getContext('2d').putImageData(new ImageData(px,w,h),0,0);
+  return new Promise(r=>c.toBlob(r,'image/jpeg',.95));
+}
+const fname=o=>(o.name.replace(/[\\/:*?"<>|]/g,'_')||'output')+'.'+o.fmt;
+function dl(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
+async function exportOne(i){const o=st.outputs[i];dl(await blobFor(o),fname(o));status('Saved '+fname(o));track('export-single','Export single output')}
+async function exportAll(){
+  if(!st.outputs.length){status('Nothing to export yet. Add an output first.');return}
+  const files=[],used=new Set();
+  for(const o of st.outputs){let nm=fname(o),k=1;while(used.has(nm))nm=fname(o).replace(/(\.\w+)$/,'_'+(k++)+'$1');used.add(nm);
+    files.push({name:nm,data:new Uint8Array(await(await blobFor(o)).arrayBuffer())})}
+  dl(new Blob([zip(files)],{type:'application/zip'}),'textures.zip');status('Saved textures.zip ('+files.length+' files)');track('export-zip','Export ZIP');
+}
+
+// ---------- drag & drop ----------
+let dc=0;
+addEventListener('dragenter',e=>{e.preventDefault();dc++;$('#drop').classList.add('on')});
+addEventListener('dragleave',()=>{if(--dc<=0){dc=0;$('#drop').classList.remove('on')}});
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();dc=0;$('#drop').classList.remove('on');addFiles(e.dataTransfer.files)});
+render();
+showPromo();
+</script></body></html>

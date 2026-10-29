@@ -148,7 +148,9 @@ button.howto:hover{background:#ffffff22;border-color:var(--c3)}
 const TK={
   docs:'https://trimkit.github.io/documentation/',
   goatcounter:'trimkit',      // your GoatCounter site code, e.g. 'texmapmixer' -> https://channelpacker.goatcounter.com
-  promo:'session'         // 'once' = first visit only (per browser) | 'session' = once per browser session | 'always'
+  promo:'smart',          // 'smart' = see promoDays / promoVisits | 'once' = first visit only | 'session' = once per browser session | 'always'
+  promoDays:2,            // 'smart': show again after this many days (0 = off)
+  promoVisits:10           // 'smart': ...or after this many visits since it was last shown (0 = off)
 };
 /* ===== ANALYTICS (GoatCounter: cookieless; counts visits, country, referrer, events) ===== */
 if(TK.goatcounter){const g=document.createElement('script');g.async=true;g.dataset.goatcounter='https://'+TK.goatcounter+'.goatcounter.com/count';g.src='https://gc.zgo.at/count.js';document.head.appendChild(g)}
@@ -161,10 +163,26 @@ document.querySelectorAll('img.logo').forEach(i=>i.addEventListener('error',()=>
 function openTut(){const p=$('#promo'),t=$('#tut');if(p&&p.open)p.close();if(t&&t.showModal&&!t.open)t.showModal()}
 function showPromo(){
   const d=$('#promo');if(!d||!d.showModal)return;
-  let store=null,key='trimkit_promo_seen';
-  try{store=TK.promo==='session'?sessionStorage:localStorage}catch(e){}
-  try{if(TK.promo!=='always'&&store&&store.getItem(key))return}catch(e){}
-  setTimeout(()=>{d.showModal();try{store&&store.setItem(key,'1')}catch(e){}},700);
+  const KEY='trimkit_promo_v2',DAY=864e5;
+  let show=true,rec={last:0,visits:0};
+  if(TK.promo==='always'){show=true}
+  else if(TK.promo==='session'){
+    try{if(sessionStorage.getItem(KEY+'_s'))show=false;else sessionStorage.setItem(KEY+'_s','1')}catch(e){}
+  }else{
+    try{rec=Object.assign(rec,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){}
+    /* count one visit per browser session, so reloads don't count */
+    let counted=false;try{counted=!!sessionStorage.getItem(KEY+'_c')}catch(e){}
+    if(!counted){rec.visits++;try{sessionStorage.setItem(KEY+'_c','1')}catch(e){}}
+    const now=Date.now();
+    if(!rec.last)show=true;                                   /* very first visit */
+    else if(TK.promo==='once')show=false;
+    else show=(TK.promoDays>0&&now-rec.last>=TK.promoDays*DAY)||(TK.promoVisits>0&&rec.visits>=TK.promoVisits);
+    /* don't re-show on a reload within the same session */
+    try{if(sessionStorage.getItem(KEY+'_s'))show=false}catch(e){}
+    if(show){rec.last=now;rec.visits=0;try{sessionStorage.setItem(KEY+'_s','1')}catch(e){}}
+    try{localStorage.setItem(KEY,JSON.stringify(rec))}catch(e){}
+  }
+  if(show)setTimeout(()=>d.showModal(),700);
 }
 const $=s=>document.querySelector(s), CH='RGBA', esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const st={inputs:[],outputs:[],sel:0,nid:1,cache:new Map()};
